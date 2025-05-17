@@ -230,7 +230,7 @@ if df is not None:
                     if 'Points' in race_df.columns:
                         team_cols.append('Points')
                     
-                    # Create team comparison - with safety checks
+                    # Create team comparison - with additional safety checks
                     if len(team_cols) > 1:  # Make sure we have at least one column besides 'Team'
                         # Create a dictionary for aggregation
                         agg_dict = {}
@@ -240,27 +240,31 @@ if df is not None:
                         
                         # Only proceed if we have aggregation columns
                         if agg_dict:
-                            team_df = race_df[team_cols].groupby('Team').agg(agg_dict).reset_index()
-                            
-                            # Display team comparison
-                            sort_col = 'Points' if 'Points' in team_df.columns else position_col
-                            ascending = 'Points' not in team_df.columns
-                            
-                            if sort_col:
-                                st.dataframe(
-                                    team_df.sort_values(sort_col, ascending=ascending),
-                                    use_container_width=True
-                                )
+                            # Check if there are any teams to group by
+                            if len(race_df['Team'].unique()) > 0:
+                                team_df = race_df[team_cols].groupby('Team').agg(agg_dict).reset_index()
                                 
-                                # Create team points chart
-                                if 'Points' in team_df.columns:
-                                    fig = px.bar(
-                                        team_df.sort_values('Points', ascending=False),
-                                        x='Team',
-                                        y='Points',
-                                        title=f"Team Points in {selected_race}"
+                                # Display team comparison
+                                sort_col = 'Points' if 'Points' in team_df.columns else position_col
+                                ascending = 'Points' not in team_df.columns
+                                
+                                if sort_col:
+                                    st.dataframe(
+                                        team_df.sort_values(sort_col, ascending=ascending),
+                                        use_container_width=True
                                     )
-                                    st.plotly_chart(fig, use_container_width=True)
+                                    
+                                    # Create team points chart
+                                    if 'Points' in team_df.columns:
+                                        fig = px.bar(
+                                            team_df.sort_values('Points', ascending=False),
+                                            x='Team',
+                                            y='Points',
+                                            title=f"Team Points in {selected_race}"
+                                        )
+                                        st.plotly_chart(fig, use_container_width=True)
+                            else:
+                                st.warning("No teams found in the data for this race")
                         else:
                             st.warning("No suitable columns found for team comparison")
                     else:
@@ -285,7 +289,7 @@ if df is not None:
                         selected_drivers = st.multiselect(
                             "Select Drivers to Compare",
                             sorted(race_df[driver_col].unique()),
-                            default=sorted(race_df[driver_col].unique())[:3]
+                            default=sorted(race_df[driver_col].unique())[:3] if len(race_df[driver_col].unique()) >= 3 else sorted(race_df[driver_col].unique())
                         )
                         
                         if selected_drivers:
@@ -299,12 +303,16 @@ if df is not None:
                                 driver = row[driver_col]
                                 for lap_col in lap_time_cols:
                                     if pd.notna(row[lap_col]):
-                                        lap_num = int(lap_col.replace('Lap', '').replace('Time', ''))
-                                        lap_times.append({
-                                            'Driver': driver,
-                                            'Lap': lap_num,
-                                            'Time': row[lap_col]
-                                        })
+                                        try:
+                                            lap_num = int(lap_col.replace('Lap', '').replace('Time', ''))
+                                            lap_times.append({
+                                                'Driver': driver,
+                                                'Lap': lap_num,
+                                                'Time': row[lap_col]
+                                            })
+                                        except ValueError:
+                                            # Skip if lap number can't be extracted
+                                            pass
                             
                             if lap_times:
                                 lap_df = pd.DataFrame(lap_times)
@@ -313,8 +321,8 @@ if df is not None:
                                 if lap_df['Time'].dtype == 'object':
                                     def convert_to_seconds(time_str):
                                         try:
-                                            if ':' in time_str:
-                                                parts = time_str.split(':')
+                                            if ':' in str(time_str):
+                                                parts = str(time_str).split(':')
                                                 return float(parts[0]) * 60 + float(parts[1])
                                             else:
                                                 return float(time_str)
