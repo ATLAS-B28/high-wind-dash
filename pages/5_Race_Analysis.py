@@ -230,26 +230,41 @@ if df is not None:
                     if 'Points' in race_df.columns:
                         team_cols.append('Points')
                     
-                    # Create team comparison
-                    team_df = race_df[team_cols].groupby('Team').agg({
-                        col: 'mean' if col == position_col else 'sum' 
-                        for col in team_cols if col != 'Team'
-                    }).reset_index()
-                    
-                    # Display team comparison
-                    st.dataframe(team_df.sort_values('Points' if 'Points' in team_df.columns else position_col, 
-                                                   ascending='Points' not in team_df.columns),
-                               use_container_width=True)
-                    
-                    # Create team points chart
-                    if 'Points' in team_df.columns:
-                        fig = px.bar(
-                            team_df.sort_values('Points', ascending=False),
-                            x='Team',
-                            y='Points',
-                            title=f"Team Points in {selected_race}"
-                        )
-                        st.plotly_chart(fig, use_container_width=True)
+                    # Create team comparison - with safety checks
+                    if len(team_cols) > 1:  # Make sure we have at least one column besides 'Team'
+                        # Create a dictionary for aggregation
+                        agg_dict = {}
+                        for col in team_cols:
+                            if col != 'Team':
+                                agg_dict[col] = 'mean' if col == position_col else 'sum'
+                        
+                        # Only proceed if we have aggregation columns
+                        if agg_dict:
+                            team_df = race_df[team_cols].groupby('Team').agg(agg_dict).reset_index()
+                            
+                            # Display team comparison
+                            sort_col = 'Points' if 'Points' in team_df.columns else position_col
+                            ascending = 'Points' not in team_df.columns
+                            
+                            if sort_col:
+                                st.dataframe(
+                                    team_df.sort_values(sort_col, ascending=ascending),
+                                    use_container_width=True
+                                )
+                                
+                                # Create team points chart
+                                if 'Points' in team_df.columns:
+                                    fig = px.bar(
+                                        team_df.sort_values('Points', ascending=False),
+                                        x='Team',
+                                        y='Points',
+                                        title=f"Team Points in {selected_race}"
+                                    )
+                                    st.plotly_chart(fig, use_container_width=True)
+                        else:
+                            st.warning("No suitable columns found for team comparison")
+                    else:
+                        st.warning("Insufficient columns for team comparison")
                 else:
                     st.warning("No Team column found in the data")
             

@@ -31,7 +31,7 @@ Thumbs.db
 .streamlit/
 
 # Data files
-*.csv
+
 *.xlsx
 *.xls
 *.parquet

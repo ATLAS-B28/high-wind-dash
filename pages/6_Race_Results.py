@@ -198,9 +198,28 @@ if data_loaded:
             # Sort by position
             race_results = race_data.sort_values('position').copy()
             
-            # Select columns to display
-            display_cols = ['position', 'driverName', 'name_y', 'grid', 'status', 'points']
-            display_names = ['Position', 'Driver', 'Constructor', 'Grid', 'Status', 'Points']
+            # Select columns to display - check if they exist first
+            available_cols = race_results.columns.tolist()
+            display_cols = ['position', 'driverName']
+            display_names = ['Position', 'Driver']
+            
+            # Add constructor name if available
+            if 'name_y' in available_cols:
+                display_cols.append('name_y')
+                display_names.append('Constructor')
+            
+            # Add other columns if available
+            if 'grid' in available_cols:
+                display_cols.append('grid')
+                display_names.append('Grid')
+            
+            if 'statusId' in available_cols:
+                display_cols.append('statusId')
+                display_names.append('Status')
+            
+            if 'points' in available_cols:
+                display_cols.append('points')
+                display_names.append('Points')
             
             # Create a clean dataframe for display
             display_df = race_results[display_cols].copy()
@@ -217,7 +236,7 @@ if data_loaded:
                 race_results.sort_values('position'),
                 x='driverName',
                 y='points',
-                color='name_y',  # Constructor name
+                color='name_y' if 'name_y' in available_cols else None,  # Constructor name
                 title=f"Points by Driver - {race_info['name']} {race_info['year']}",
                 labels={'driverName': 'Driver', 'points': 'Points', 'name_y': 'Constructor'}
             )
@@ -502,7 +521,7 @@ else:
                         display_names.append('Constructor')
                     
                     # Add other columns if available
-                    for col, name in zip(['grid', 'status', 'points'], ['Grid', 'Status', 'Points']):
+                    for col, name in zip(['grid', 'statusId', 'points'], ['Grid', 'Status', 'Points']):
                         if col in results_df.columns:
                             display_cols.append(col)
                             display_names.append(name)
@@ -591,6 +610,6 @@ else:
             'position': [1, 2, 3, 4],
             'points': [25, 18, 15, 12],
             'grid': [1, 2, 3, 4],
-            'status': ['Finished', 'Finished', 'Finished', 'Finished']
+            'statusId': [1, 1, 1, 1]
         })
         st.dataframe(example_df)
